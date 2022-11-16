@@ -8,6 +8,6 @@ https://www.biorxiv.org/content/10.1101/2022.10.19.512842v3
  - CHiCAGO vs ABC comparison
  - Epigenetic/TFs binding/PCHi-C/GWAS plots
 
-/LOLA contains script for running LOLA, checking enricment of promoter-interacting regions for TF binding sites.
+/LOLA contains a script for running LOLA, checking enrichment of promoter-interacting regions for TF binding sites.
 
 More udpates coming shortly.
