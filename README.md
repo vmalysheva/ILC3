@@ -1,5 +1,12 @@
-Code for Malysheva, Ray-Jones et al
+# High-resolution promoter interaction analysis in Type 3 Innate Lymphoid Cells
+
+___
+
+## Overview
+
+This repo contains code for Malysheva, Ray-Jones et al
 https://www.biorxiv.org/content/10.1101/2022.10.19.512842v3
+
 
 ## Directory Description
 
