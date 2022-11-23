@@ -18,7 +18,7 @@ The `./PCHi-C` directory contains code for:
  - CHiCAGO vs ABC comparison
  - Epigenetic/TFs binding/PCHi-C/GWAS plots
 
-### [`./LOLA`](../LOLA)
+### [`./LOLA`](./LOLA)
 The `./LOLA` directory contains a script for running LOLA, checking enrichment of promoter-interacting regions for TF binding sites.
 
 More udpates coming shortly.
