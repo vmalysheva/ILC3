@@ -10,7 +10,7 @@ https://www.biorxiv.org/content/10.1101/2022.10.19.512842v3
 
 ## Directory Description
 
-### [`./PCHi-C`](./PCHi-C)
+### [`./PCHiC`](./PCHiC)
 The `./PCHi-C` directory contains code for:
  - ILC3s PCHi-C data analysis
  - comparison with previously published data (Javierre et al.)
