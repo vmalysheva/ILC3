@@ -1,4 +1,6 @@
 ```{r}
+# code written by Mikhail Spivakov
+
 library(DESeq2)
 dds = readRDS("dds_2025.rds")
 metadata = read.table("metadata.txt", header=T, stringsAsFactors = T)
