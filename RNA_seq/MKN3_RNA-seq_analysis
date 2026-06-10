@@ -1,5 +1,3 @@
-# code written by Mikhail Spivakov
-
 ```{r}
 library(DESeq2)
 dds = readRDS("dds_2025.rds")
