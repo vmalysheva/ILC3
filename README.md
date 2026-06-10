@@ -22,6 +22,10 @@ The `./PCHi-C` directory contains code for:
 The `./RELI` directory contains code for:
  - analysis of RELI calling across disease traits for ILC3s and CD4+ T cells
 
+### [`./RNA-seq`](./RNA-seq)
+The `./RNA-seq` directory contains code for:
+ - Contains code for analysis of MNK3 RNA-seq data
+
 ### [`./LOLA`](./LOLA)
 The `./LOLA` directory contains a script for running LOLA, checking enrichment of promoter-interacting regions for TF binding sites.
 
