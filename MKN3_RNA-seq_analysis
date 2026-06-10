@@ -1,0 +1,888 @@
+# code written by Mikhail Spivakov
+
+```{r}
+library(DESeq2)
+dds = readRDS("dds_2025.rds")
+metadata = read.table("metadata.txt", header=T, stringsAsFactors = T)
+```
+
+
+
+```{r}
+
+ddsWt = dds[, which(metadata$CRISPR=="No")]
+design(ddsWt) <- ~1+Type+Stim
+ddsWt = DESeq(ddsWt)
+
+```
+
+```{r}
+
+resWt  = results(ddsWt, contrast = c("Stim", "Yes", "No"))
+nrow(resWt[!is.na(resWt$padj) & resWt$padj<0.05,])
+head(as.data.frame(resWt[order(resWt$padj),]))
+resWt[c("Il17f", "Lrp1", "Stat5a", "Il22b", "Gadd45b", "Cxcr5", "Sorl1"), ]
+```
+
+```{r}
+
+ddsActA <- dds[, which(metadata$Type=="a" & metadata$Stim=="Yes")]
+design(ddsActA) <- ~1+CRISPR
+ddsActA = DESeq(ddsActA)
+
+```
+
+```{r}
+
+resActA = results(ddsActA)
+nrow(resActA[!is.na(resActA$padj) & resActA$padj<0.05,])
+resActA_signif = resActA[!is.na(resActA$padj) & resActA$padj<0.05,]
+head(as.data.frame(resActA_signif[order(resActA_signif$padj),]))
+resActA["Cln3", ] 
+```
+
+```{r}
+
+ddsBasalA <- dds[, which(metadata$Type=="a" & metadata$Stim=="No")]
+design(ddsBasalA) <- ~1+CRISPR
+ddsBasalA = DESeq(ddsBasalA)
+
+```
+
+```{r}
+
+resBasalA = results(ddsBasalA)
+nrow(resBasalA[!is.na(resBasalA$padj) & resBasalA$padj<0.05,])
+resBasalA_signif = resBasalA[!is.na(resBasalA$padj) & resBasalA$padj<0.05,]
+head(as.data.frame(resBasalA_signif[order(resBasalA_signif$padj),]))
+resBasalA_signif["Cln3", ] 
+```
+
+
+CRISPRa stim / unstim combined
+
+```{r}
+
+ddsA <- dds[, which(metadata$Type=="a")]
+design(ddsA) <- ~1+CRISPR*Stim
+ddsA = DESeq(ddsA)
+
+resultsNames(ddsA)
+
+```
+
+
+```{r}
+mod_mat_A <- model.matrix(design(ddsA), colData(ddsA))
+
+# Define coefficient vectors for each condition
+wt_unstim_A <- colMeans(mod_mat_A[ddsA$CRISPR == "No" & ddsA$Stim == "No", ])
+wt_stim_A <- colMeans(mod_mat_A[ddsA$CRISPR == "No" & ddsA$Stim == "Yes", ])
+crispri_unstim_A <- colMeans(mod_mat_A[ddsA$CRISPR == "Yes" & ddsA$Stim == "No", ])
+crispri_stim_A <- colMeans(mod_mat_A[ddsA$CRISPR == "Yes" & ddsA$Stim == "Yes", ])
+
+```
+
+```{r}
+
+# CRISPRa Stim
+resA_crispr_stim <- results(ddsA, contrast = crispri_stim_A - wt_stim_A)
+nrow(resA_crispr_stim[!is.na(resA_crispr_stim$padj) & resA_crispr_stim$padj<0.05,])
+resA_crispr_stim_signif = resA_crispr_stim[!is.na(resA_crispr_stim$padj) & resA_crispr_stim$padj<0.05,] 
+head(as.data.frame(resA_crispr_stim_signif))
+```
+
+```{r}
+
+# CRISPRi Unstim
+resA_crispr_unstim <- results(ddsA, contrast = crispri_unstim_A - wt_unstim_A)
+nrow(resA_crispr_unstim[!is.na(resA_crispr_unstim$padj) & resA_crispr_unstim$padj<0.05,]) 
+resA_crispr_unstim_signif = resA_crispr_unstim[!is.na(resA_crispr_unstim$padj) & resA_crispr_unstim$padj<0.05,] 
+head(as.data.frame(resA_crispr_unstim_signif))
+
+```
+
+
+Now look at CRISPRi - note that expect it to be stronger than in Nora's cells.
+I think a joint model for Stim and Unstim should work fine, based on the consistency betweeen joint and separate ones for CRISPRa
+
+```{r}
+ddsI <- dds[, which(metadata$Type=="i")]
+design(ddsI) <- ~1+CRISPR*Stim
+ddsI = DESeq(ddsI)
+
+resultsNames(ddsI)
+
+resI = results(ddsI, contrast=c("CRISPR", "Yes", "No"))
+nrow(resI[!is.na(resI$padj) & resI$padj<0.05,])
+resI_signif = resI[!is.na(resI$padj) & resI$padj<0.05,]
+head(rownames(resI_signif[order(resI_signif$padj),]), n=50)
+resI_signif["Cln3", ] 
+```
+
+
+```{r}
+mod_mat_I <- model.matrix(design(ddsI), colData(ddsI))
+
+# Define coefficient vectors for each condition
+wt_unstim_I <- colMeans(mod_mat_I[ddsI$CRISPR == "No" & ddsI$Stim == "No", ])
+wt_stim_I <- colMeans(mod_mat_I[ddsI$CRISPR == "No" & ddsI$Stim == "Yes", ])
+crispri_unstim_I <- colMeans(mod_mat_I[ddsI$CRISPR == "Yes" & ddsI$Stim == "No", ])
+crispri_stim_I <- colMeans(mod_mat_I[ddsI$CRISPR == "Yes" & ddsI$Stim == "Yes", ])
+
+```
+
+```{r}
+
+# CRISPRi Stim
+resI_crispr_stim <- results(ddsI, contrast = crispri_stim_I - wt_stim_I)
+nrow(resI_crispr_stim[!is.na(resI_crispr_stim$padj) & resI_crispr_stim$padj<0.05,])
+resI_crispr_stim_signif = resI_crispr_stim[!is.na(resI_crispr_stim$padj) & resI_crispr_stim$padj<0.05,] 
+head(as.data.frame(resI_crispr_stim_signif))
+```
+
+```{r}
+
+# CRISPRi Unstim
+resI_crispr_unstim <- results(ddsI, contrast = crispri_unstim_I - wt_unstim_I)
+nrow(resI_crispr_unstim[!is.na(resI_crispr_unstim$padj) & resI_crispr_unstim$padj<0.05,]) # 34
+resI_crispr_unstim_signif = resI_crispr_unstim[!is.na(resI_crispr_unstim$padj) & resI_crispr_unstim$padj<0.05,] 
+head(as.data.frame(resI_crispr_unstim_signif))
+
+```
+
+
+Replotting the betas plot for CRISPRa stim vs unstim more beautifully
+
+```{r}
+
+pdf("CRISPRa_stim_vs_unstim.pdf", height=8, width=10)
+with(CRISPR_res[!is.na(CRISPR_res$CRISPRa_padj.x) & !is.na(CRISPR_res$CRISPRa_padj.y),],
+     plot(CRISPRa_log2FoldChange.x, CRISPRa_log2FoldChange.y, xlim=c(-2,3.5), ylim=c(-4,4), pch=19, cex=0.5,
+          xlab="L2FC (CRISPRa vs wt): unstimulated", ylab="L2FC (CRISPRa vs wt): stimulated", col="gray50")
+     ) 
+with(CRISPR_res[!is.na(CRISPR_res$CRISPRa_padj.x) & !is.na(CRISPR_res$CRISPRa_padj.y) & 
+                  (CRISPR_res$CRISPRa_padj.x<0.05 & CRISPR_res$CRISPRa_padj.y>0.05),],
+     points(CRISPRa_log2FoldChange.x, CRISPRa_log2FoldChange.y, pch=19, cex=0.5, col="darkgreen"))
+
+with(CRISPR_res[!is.na(CRISPR_res$CRISPRa_padj.x) & !is.na(CRISPR_res$CRISPRa_padj.y) & 
+                  CRISPR_res$CRISPRa_padj.x<0.05 & CRISPR_res$CRISPRa_padj.y>0.05 & 
+                  sign(CRISPR_res$CRISPRa_log2FoldChange.x)*(CRISPR_res$CRISPRa_log2FoldChange.x - CRISPR_res$CRISPRa_log2FoldChange.y)>1 ,],
+     text(x=CRISPRa_log2FoldChange.x,y=CRISPRa_log2FoldChange.y+0.2,labels=Row.names, col="darkgreen"))
+
+
+with(CRISPR_res[!is.na(CRISPR_res$CRISPRa_padj.x) & !is.na(CRISPR_res$CRISPRa_padj.y) & 
+                  (CRISPR_res$CRISPRa_padj.x>0.05 & CRISPR_res$CRISPRa_padj.y<0.05),],
+     points(CRISPRa_log2FoldChange.x, CRISPRa_log2FoldChange.y, pch=19, cex=0.5, col="darkblue"))
+
+with(CRISPR_res[!is.na(CRISPR_res$CRISPRa_padj.x) & !is.na(CRISPR_res$CRISPRa_padj.y) & 
+                  CRISPR_res$CRISPRa_padj.x>0.05 & CRISPR_res$CRISPRa_padj.y<0.05 & 
+                  sign(CRISPR_res$CRISPRa_log2FoldChange.y)*(CRISPR_res$CRISPRa_log2FoldChange.y - CRISPR_res$CRISPRa_log2FoldChange.x)>1 ,],
+     text(x=CRISPRa_log2FoldChange.x,y=CRISPRa_log2FoldChange.y+0.2,labels=Row.names, col="darkblue"))
+
+
+with(CRISPR_res[!is.na(CRISPR_res$CRISPRa_padj.x) & !is.na(CRISPR_res$CRISPRa_padj.y) & 
+                  (CRISPR_res$CRISPRa_padj.x<0.05 & CRISPR_res$CRISPRa_padj.y<0.05),],
+     points(CRISPRa_log2FoldChange.x, CRISPRa_log2FoldChange.y, pch=19, cex=0.5, col="darkred"))
+
+
+with(CRISPR_res[!is.na(CRISPR_res$CRISPRa_padj.x) & !is.na(CRISPR_res$CRISPRa_padj.y) & 
+                  CRISPR_res$CRISPRa_padj.x<0.05 & CRISPR_res$CRISPRa_padj.y<0.05 & 
+                  abs(CRISPR_res$CRISPRa_log2FoldChange.x)>1 & abs(CRISPR_res$CRISPRa_log2FoldChange.y)>1 ,],
+     text(x=CRISPRa_log2FoldChange.x,y=CRISPRa_log2FoldChange.y+0.2,labels=Row.names, col="darkred"))
+
+
+abline(h=0, lty=1, lwd=0.5)
+abline(v=0, lty=1, lwd=0.5)
+abline(a =0, b=1, lty=2)
+
+legend("bottomright", c("DEG in unstim", "DEG in stim", "DEG in both"),fill=c("darkgreen", "darkblue", "darkred"))
+
+dev.off()
+
+```
+
+
+Volcano plots
+
+```{r fig.height=12, fig.width=12}
+
+library(EnhancedVolcano)
+EnhancedVolcano(resWt,
+    lab = rownames(resWt),
+    x = 'log2FoldChange',
+    y = 'padj',
+    pCutoff = 0.05,  # Adjust this as needed
+    FCcutoff = 1.0,  # Fold change cutoff
+    title = 'Volcano plot of DESeq2 results',
+    subtitle = 'Wt: Stim vs Unstim',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~-Log[10]~italic(Padj)),
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    legendLabels=c('Not sig.', 'Log2 FC', 'p-value', 'p-value & Log2 FC'),
+    legendPosition = 'bottom',
+    labSize = 6.0,
+    pointSize = 3.0,
+    gridlines.major = TRUE,
+    gridlines.minor = FALSE
+)
+
+```
+
+
+
+```{r fig.height=12, fig.width=12}
+
+#pdf("volcano_wta_stim_vs_unstim.pdf")
+EnhancedVolcano(resWt_a,
+    lab = rownames(resWt_a),
+    x = 'log2FoldChange',
+    y = 'padj',
+    pCutoff = 0.05,  # Adjust this as needed
+    FCcutoff = 1.0,  # Fold change cutoff
+    title = 'Volcano plot of DESeq2 results',
+    subtitle = 'Wt: Stim vs Unstim',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~-Log[10]~italic(Padj)),
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    legendLabels=c('Not sig.', 'Log2 FC', 'p-value', 'p-value & Log2 FC'),
+    legendPosition = 'bottom',
+    labSize = 6.0,
+    pointSize = 3.0,
+    gridlines.major = TRUE,
+    gridlines.minor = FALSE
+)
+#dev.off()
+```
+
+Same in the pub style...
+
+```{r}
+
+resWt_a_trimmed = resWt_a
+resWt_a_trimmed[resWt_a_trimmed$log2FoldChange>10 & !is.na(resWt_a_trimmed$log2FoldChange), "log2FoldChange"] = 10
+resWt_a_trimmed[resWt_a_trimmed$log2FoldChange<(-10) & !is.na(resWt_a_trimmed$log2FoldChange), "log2FoldChange"] = -10
+trimmed_resWt_genes = rownames(resWt_a_trimmed[abs(resWt_a_trimmed$log2FoldChange)>10  &
+                                            !is.na(resWt_a_trimmed$log2FoldChange), ])
+```
+
+```{r}
+
+# wtlabel = rownames(resWt_a_trimmed[(abs(resWt_a_trimmed$log2FoldChange)>3 | -log10(resWt_a_trimmed$padj)>25) & 
+#                                       !is.na(resWt_a_trimmed$log2FoldChange) &  !is.na(resWt_a_trimmed$padj),])
+
+wt_stim_unstim_very_signif_genes = rownames(resWt_a[-log10(resWt_a$padj)>10 &
+                                                        abs(resWt_a$log2FoldChange)>1 & 
+                            !is.na(resWt_a$log2FoldChange) &  !is.na(resWt_a$padj),])
+g_wt_stim_unstim_very_signif <- enrichGO(gene = wt_stim_unstim_very_signif_genes,
+                keyType = "SYMBOL",
+                OrgDb = org.Mm.eg.db,
+                ont = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff = 0.05,
+                readable = TRUE)
+
+```
+
+```{r}
+
+dotplot(g_wt_stim_unstim_very_signif)
+```
+
+```{r}
+goi_wt = unique(c(unlist(g_wt_stim_unstim_very_signif@geneSets[c("GO:0030098", "GO:0050727", "GO:0042093")])))
+wtSignif = c(wt_stim_unstim_very_signif_genes[wt_stim_unstim_very_signif_genes %in% goi_wt], "Cln3", "Apobr")
+
+
+```
+
+```{r}
+pdf("volcano_wta_stim_vs_unstim_pub.pdf", height=7, width=7)
+EnhancedVolcano(resWt_a_trimmed,
+    lab = rownames(resWt_a_trimmed),
+    x = 'log2FoldChange',
+    y = 'padj', #ylim=c(0,60), xlim=c(-25,25),
+    pCutoff = 0.05,  # Adjust this as needed
+    FCcutoff = 0,  # Fold change cutoff
+    title = 'Volcano plot of DESeq2 results',
+    subtitle = 'Stimulated vs Unstimulated: wt',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~-Log[10]~italic(Padj)),
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    legendLabels=c('Not sig.', 'Log2 FC', 'padj', 'padj & Log2 FC'),
+    legendPosition = 'bottom',
+    labSize = 3.0,
+    #pointSize = 5.0,
+    gridlines.major = TRUE,
+    gridlines.minor = FALSE, 
+    boxedLabels = F, 
+    drawConnectors = T, widthConnectors = 0.25, arrowheads=F, colConnectors ="lightgrey", max.overlaps=50,
+    selectLab = wtSignif,
+    pointSize = ifelse(rownames(resWt_a_trimmed)%in%trimmed_resWt_genes, 2,1),
+    
+)+  theme_minimal(base_size=9) +
+    theme(
+      panel.border = element_rect(color = "black", fill = NA, size = 0.15),
+      axis.line = element_line(size = 0.25),
+      axis.ticks = element_line(size = 0.25),
+      panel.grid.major = element_line(size = 0.5),
+      panel.grid.minor = element_line(size = 0.25)
+    )
+
+dev.off()
+
+```
+
+
+```{r fig.height=12, fig.width=12}
+
+EnhancedVolcano(resI_crispr_stim,
+    lab = rownames(resI_crispr_stim),
+    x = 'log2FoldChange',
+    y = 'padj',
+    pCutoff = 0.05,  # Adjust this as needed
+    FCcutoff = 1.0,  # Fold change cutoff
+    title = 'Volcano plot of DESeq2 results',
+    subtitle = 'Stimulated: wt vs Cln3 CRISPRi',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~-Log[10]~italic(Padj)),
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    legendLabels=c('Not sig.', 'Log2 FC', 'p-value', 'p-value & Log2 FC'),
+    legendPosition = 'bottom',
+    labSize = 6.0,
+    pointSize = 3.0,
+    gridlines.major = TRUE,
+    gridlines.minor = FALSE
+)
+
+```
+
+
+```{r}
+pdf("volcano_crisprI_stim_labelled_noBoxes.pdf", height=7, width=7)
+EnhancedVolcano(resI_crispr_stim,
+    lab = rownames(resI_crispr_stim),
+    x = 'log2FoldChange',
+    y = 'padj', xlim=c(-6,5),
+    pCutoff = 0.05,  # Adjust this as needed
+    FCcutoff = 0,  # Fold change cutoff
+    title = 'Volcano plot of DESeq2 results',
+    subtitle = 'Stimulated: wt vs Cln3 CRISPRi',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~-Log[10]~italic(Padj)),
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    legendLabels=c('Not sig.', 'Log2 FC', 'padj', 'padj & Log2 FC'),
+    legendPosition = 'bottom',
+    labSize = 3.0,
+    pointSize = 2,
+    gridlines.major = TRUE,
+    gridlines.minor = FALSE, 
+    boxedLabels = F, 
+    drawConnectors = T, widthConnectors = 0.25, arrowheads=F, colConnectors ="lightgrey", max.overlaps=200,
+    selectLab = c(rownames(resI_crispr_stim[resI_crispr_stim$padj<1e-3 & !is.na(resI_crispr_stim$padj),])),
+    #pointSize = ifelse(rownames(resA_crispr_stim_trimmed)%in%trimmed, 2,1),
+    
+)+  theme_minimal(base_size=9) +
+    theme(
+      panel.border = element_rect(color = "black", fill = NA, size = 0.15),
+      axis.line = element_line(size = 0.25),
+      axis.ticks = element_line(size = 0.25),
+      panel.grid.major = element_line(size = 0.5),
+      panel.grid.minor = element_line(size = 0.25)
+    )
+
+dev.off()
+
+```
+
+
+```{r}
+pdf("volcano_crisprI_unstim_labelled_noBoxes.pdf", height=7, width=7)
+EnhancedVolcano(resI_crispr_unstim,
+    lab = rownames(resI_crispr_unstim),
+    x = 'log2FoldChange',
+    y = 'padj', xlim=c(-6,5),
+    pCutoff = 0.05,  # Adjust this as needed
+    FCcutoff = 0,  # Fold change cutoff
+    title = 'Volcano plot of DESeq2 results',
+    subtitle = 'Unstimulated: wt vs Cln3 CRISPRi',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~-Log[10]~italic(Padj)),
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    legendLabels=c('Not sig.', 'Log2 FC', 'padj', 'padj & Log2 FC'),
+    legendPosition = 'bottom',
+    labSize = 3.0,
+    pointSize = 2,
+    gridlines.major = TRUE,
+    gridlines.minor = FALSE, 
+    boxedLabels = F, 
+    drawConnectors = T, widthConnectors = 0.25, arrowheads=F, colConnectors ="lightgrey", max.overlaps=200,
+    selectLab = c(rownames(resI_crispr_unstim[resI_crispr_unstim$padj<1e-3 & !is.na(resI_crispr_unstim$padj),])),
+    #pointSize = ifelse(rownames(resA_crispr_stim_trimmed)%in%trimmed, 2,1),
+    
+)+  theme_minimal(base_size=9) +
+    theme(
+      panel.border = element_rect(color = "black", fill = NA, size = 0.15),
+      axis.line = element_line(size = 0.25),
+      axis.ticks = element_line(size = 0.25),
+      panel.grid.major = element_line(size = 0.5),
+      panel.grid.minor = element_line(size = 0.25)
+    )
+
+dev.off()
+
+```
+
+
+
+```{r fig.height=12, fig.width=12}
+
+EnhancedVolcano(resA_crispr_stim,
+    lab = rownames(resA_crispr_stim),
+    x = 'log2FoldChange',
+    y = 'padj',
+    pCutoff = 0.05,  # Adjust this as needed
+    FCcutoff = 0.5,  # Fold change cutoff
+    title = 'Volcano plot of DESeq2 results',
+    subtitle = 'Stimulated: wt vs Cln3 CRISPRa',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~-Log[10]~italic(Padj)),
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    legendLabels=c('Not sig.', 'Log2 FC', 'padj', 'padj & Log2 FC'),
+    legendPosition = 'bottom',
+    labSize = 4.0,
+    pointSize = 4.0,
+    gridlines.major = TRUE,
+    gridlines.minor = FALSE, 
+)
+
+```
+
+
+GO analysis
+
+```{r}
+
+library(clusterProfiler)
+library(org.Mm.eg.db)
+stimCRISPRa_genes = rownames(resA_crispr_stim_signif)
+g_stimCRISPRa <- enrichGO(gene = stimCRISPRa_genes,
+                keyType = "SYMBOL",
+                OrgDb = org.Mm.eg.db,
+                ont = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff = 0.05,
+                readable = TRUE)
+```
+
+```{r}
+pdf("dotplot_stim_a_vs_wt.pdf")
+dotplot(g_stimCRISPRa)
+dev.off()
+
+```
+
+Extracting the gene signature
+```{r}
+goi = unique(c(unlist(g_stimCRISPRa@geneSets[c("GO:0030098", "GO:0030217", "GO:0050863", "GO:0070661")]), "Cln3", "Apobr"))
+evSignif = stimCRISPRa_genes[resA_crispr_stim_signif$padj<0.05]
+outliers = stimCRISPRa_genes[-log10(resA_crispr_stim_signif$padj)>20 | abs(resA_crispr_stim_signif$log2FoldChange)>5]
+goi_stimCRISPRa = c(evSignif[evSignif%in%goi], outliers)
+
+resA_crispr_stim_trimmed = resA_crispr_stim
+resA_crispr_stim_trimmed[-log10(resA_crispr_stim_trimmed$padj)>60 & !is.na(resA_crispr_stim_trimmed$padj), "padj"] = 1e-60
+resA_crispr_stim_trimmed[resA_crispr_stim_trimmed$log2FoldChange>5 & !is.na(resA_crispr_stim_trimmed$log2FoldChange), "log2FoldChange"] = 5
+resA_crispr_stim_trimmed[resA_crispr_stim_trimmed$log2FoldChange<(-5) & !is.na(resA_crispr_stim_trimmed$log2FoldChange), "log2FoldChange"] = -5
+trimmed = rownames(resA_crispr_stim[(abs(resA_crispr_stim$log2FoldChange)>5 |
+                                            -log10(resA_crispr_stim$padj)>60) &
+                                            !is.na(resA_crispr_stim$log2FoldChange) &  !is.na(resA_crispr_stim$padj), ])
+
+#goi_stimCRISPRa= evSignif[evSignif%in%goi]
+```
+
+
+Now enhanced volcano with these genes labelled...
+
+```{r}
+pdf("volcano_stim_a_vs_wt_labelled_noBoxes.pdf", height=7, width=7)
+EnhancedVolcano(resA_crispr_stim_trimmed,
+    lab = rownames(resA_crispr_stim_trimmed),
+    x = 'log2FoldChange',
+    y = 'padj', #ylim=c(0,60), xlim=c(-25,25),
+    pCutoff = 0.05,  # Adjust this as needed
+    FCcutoff = 0,  # Fold change cutoff
+    title = 'Volcano plot of DESeq2 results',
+    subtitle = 'Stimulated: wt vs Cln3 CRISPRa',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~-Log[10]~italic(Padj)),
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    legendLabels=c('Not sig.', 'Log2 FC', 'padj', 'padj & Log2 FC'),
+    legendPosition = 'bottom',
+    labSize = 3.0,
+    #pointSize = 5.0,
+    gridlines.major = TRUE,
+    gridlines.minor = FALSE, 
+    boxedLabels = F, 
+    drawConnectors = T, widthConnectors = 0.25, arrowheads=F, colConnectors ="lightgrey", max.overlaps=200,
+    selectLab = goi_stimCRISPRa,
+    pointSize = ifelse(rownames(resA_crispr_stim_trimmed)%in%trimmed, 2,1),
+    
+)+  theme_minimal(base_size=9) +
+    theme(
+      panel.border = element_rect(color = "black", fill = NA, size = 0.15),
+      axis.line = element_line(size = 0.25),
+      axis.ticks = element_line(size = 0.25),
+      panel.grid.major = element_line(size = 0.5),
+      panel.grid.minor = element_line(size = 0.25)
+    )
+
+dev.off()
+
+```
+
+Now the same for unstim
+
+```{r}
+
+unstimCRISPRa_genes = rownames(resA_crispr_unstim_signif)
+g_unstimCRISPRa <- enrichGO(gene = unstimCRISPRa_genes,
+                keyType = "SYMBOL",
+                OrgDb = org.Mm.eg.db,
+                ont = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff = 0.05,
+                readable = TRUE)
+```
+
+```{r}
+pdf("dotplot_unstim_a_vs_wt.pdf")
+dotplot(g_unstimCRISPRa)
+dev.off()
+
+```
+
+Extracting the gene signature
+```{r}
+goi_unstim = unique(c(unlist(g_unstimCRISPRa@geneSets[c("GO:0030098", "GO:0030217", "GO:0050863", "GO:0070661")]), "Cln3", "Apobr"))
+ev_unstim_Signif = unstimCRISPRa_genes[resA_crispr_unstim_signif$padj<0.05]
+unstim_outliers = unstimCRISPRa_genes[-log10(resA_crispr_unstim_signif$padj)>20 | abs(resA_crispr_unstim_signif$log2FoldChange)>5]
+goi_unstimCRISPRa = c(evSignif[ev_unstim_Signif%in%goi_unstim], unstim_outliers)
+
+resA_crispr_unstim_trimmed = resA_crispr_unstim
+resA_crispr_unstim_trimmed[-log10(resA_crispr_unstim_trimmed$padj)>60 & !is.na(resA_crispr_unstim_trimmed$padj), "padj"] = 1e-60
+resA_crispr_unstim_trimmed[resA_crispr_unstim_trimmed$log2FoldChange>5 & !is.na(resA_crispr_unstim_trimmed$log2FoldChange), "log2FoldChange"] = 5
+resA_crispr_unstim_trimmed[resA_crispr_unstim_trimmed$log2FoldChange<(-5) & !is.na(resA_crispr_unstim_trimmed$log2FoldChange), "log2FoldChange"] = -5
+unstim_trimmed = rownames(resA_crispr_unstim[(abs(resA_crispr_unstim$log2FoldChange)>5 |
+                                            -log10(resA_crispr_unstim$padj)>60) &
+                                            !is.na(resA_crispr_unstim$log2FoldChange) &  !is.na(resA_crispr_unstim$padj), ])
+
+#goi_stimCRISPRa= evSignif[evSignif%in%goi]
+```
+
+
+Now enhanced volcano with these genes labelled...
+
+```{r}
+pdf("volcano_unstim_a_vs_wt_labelled_noBoxes.pdf", height=7, width=7)
+EnhancedVolcano(resA_crispr_unstim_trimmed,
+    lab = rownames(resA_crispr_stim_trimmed),
+    x = 'log2FoldChange',
+    y = 'padj', #ylim=c(0,60), xlim=c(-25,25),
+    pCutoff = 0.05,  # Adjust this as needed
+    FCcutoff = 0,  # Fold change cutoff
+    title = 'Volcano plot of DESeq2 results',
+    subtitle = 'Unstimulated: wt vs Cln3 CRISPRa',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~-Log[10]~italic(Padj)),
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    legendLabels=c('Not sig.', 'Log2 FC', 'padj', 'padj & Log2 FC'),
+    legendPosition = 'bottom',
+    labSize = 3.0,
+    #pointSize = 5.0,
+    gridlines.major = TRUE,
+    gridlines.minor = FALSE, 
+    boxedLabels = F, 
+    drawConnectors = T, widthConnectors = 0.25, arrowheads=F, colConnectors ="lightgrey", max.overlaps=200,
+    selectLab = goi_unstimCRISPRa,
+    pointSize = ifelse(rownames(resA_crispr_unstim_trimmed)%in%unstim_trimmed, 2,1),
+    )+  theme_minimal(base_size=9) +
+    theme(
+      panel.border = element_rect(color = "black", fill = NA, size = 0.15),
+      axis.line = element_line(size = 0.25),
+      axis.ticks = element_line(size = 0.25),
+      panel.grid.major = element_line(size = 0.5),
+      panel.grid.minor = element_line(size = 0.25)
+    )
+
+dev.off()
+
+```
+
+
+```{r fig.height=12, fig.width=12}
+
+library(enrichplot)
+goplot(g_stimCRISPRa)
+pts_g_stimCRISPRa = pairwise_termsim(g_stimCRISPRa)
+emapplot(pts_g_stimCRISPRa)
+```
+
+```{r}
+pdf("cnet_stim_a_vs_wt.pdf")
+cnetplot(pts_g_stimCRISPRa)
+dev.off
+```
+
+Integration with public TL1A data in ex vivo mILC3s
+
+```{r}
+
+TL1A = fread("/Users/mspivakov/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Lera/Rachel_RNAseq/TL1A_deseq_res_gname.txt")
+resWt_dt = copy(as.data.table(resWt))
+resWt_dt[, symbol:=rownames(resWt)]
+resWt_TL1A = merge(resWt_dt, TL1A, by="symbol")
+
+with(resWt_TL1A[!is.na(log2FoldChange.x) & !is.na(log2FoldChange.y)], cor(log2FoldChange.x,log2FoldChange.y))
+
+pdf("MNK3_TL1A_comparison.pdf")
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y),],
+     plot(log2FoldChange.x, log2FoldChange.y, xlim=c(-6,6), ylim=c(-6,6), pch=19, cex=0.5,
+          xlab="L2FC: MNK3 (stim/unstim)", ylab="L2FC: mILC3 (TL1A+/-)", col="gray50")
+     ) 
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  (padj.x<0.05 & padj.y>0.05),],
+     points(log2FoldChange.x, log2FoldChange.y, pch=19, cex=0.5, col="darkgreen"))
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  padj.x<0.05 & padj.y>0.05 & 
+                  sign(log2FoldChange.x)*(log2FoldChange.x - log2FoldChange.y)>2 ,],
+     text(x=log2FoldChange.x,y=log2FoldChange.y+0.2,labels=symbol, col="darkgreen"))
+
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  (padj.x>0.05 & padj.y<0.05),],
+     points(log2FoldChange.x, log2FoldChange.y, pch=19, cex=0.5, col="darkblue"))
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  padj.x>0.05 & padj.y<0.05 & 
+                  sign(log2FoldChange.y)*(log2FoldChange.y - log2FoldChange.x)>2 ,],
+     text(x=log2FoldChange.x,y=log2FoldChange.y+0.2,labels=symbol, col="darkblue"))
+
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  (padj.x<0.05 & padj.y<0.05),],
+     points(log2FoldChange.x, log2FoldChange.y, pch=19, cex=0.5, col="darkred"))
+
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  padj.x<0.05 & padj.y<0.05 & 
+                  abs(log2FoldChange.x)>2 & abs(log2FoldChange.y)>2 ,],
+     text(x=log2FoldChange.x,y=log2FoldChange.y+0.2,labels=symbol, col="darkred"))
+
+
+abline(h=0, lty=1, lwd=0.5)
+abline(v=0, lty=1, lwd=0.5)
+abline(a =0, b=1, lty=2)
+
+
+legend("bottomright", c("DEG in MNK3", "DEG in mILC3", "DEG in both"),fill=c("darkgreen", "darkblue", "darkred"))
+
+dev.off()
+
+```
+
+
+
+```{r}
+
+nrow(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),]) # 722 CRISPRa DEGs in stimulated cells
+nrow(resWt_TL1A[symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),]) & ((padj.x<0.05 & !is.na(padj.x)) | (padj.y<0.05 & !is.na(padj.y)))]) # 408 of them are DEGs in either TL1A or IL23/IL1b stimulation of mILC3s or MNK3s, respectively
+nrow(resWt_TL1A[symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),]) & padj.x<0.05 & !is.na(padj.x) & (padj.y>0.05 | is.na(padj.y))]) # 153 of them are IL23/IL1b MNK3 only
+nrow(resWt_TL1A[symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),]) & (padj.x>0.05 | is.na(padj.x)) & (padj.y<0.05 & !is.na(padj.y))]) # 91 of them are TL1A only
+
+nrow(resWt_TL1A[symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),]) & (padj.x<0.05 & !is.na(padj.x)) & (padj.y<0.05 & !is.na(padj.y))]) # 164 of them are both
+```
+
+```{r}
+library(eulerr)
+
+il23_crisprA = resWt_TL1A[symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),]) & padj.x<0.05 & !is.na(padj.x)]$symbol
+tl1a_crisprA = resWt_TL1A[symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),]) & padj.y<0.05 & !is.na(padj.y)]$symbol
+
+#plot(venn(list(IL23IL1b=unique(il23_crisprA), TL1A=unique(tl1a_crisprA))))
+pdf("euler_crisprA_genes_in_stim_ILC3_MNK3.pdf")
+plot(euler(list(IL23IL1b=unique(il23_crisprA), TL1A=unique(tl1a_crisprA))), quantities=T, fills=list(fill = c("darkgreen", "darkblue", "darkred")))
+dev.off()
+
+```
+
+Paint the beta-beta plot by those genes
+
+```{r}
+
+pdf("MNK3_TL1A_comparison_painted_by_CRISPRa_2.pdf")
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y)],
+     plot(log2FoldChange.x, log2FoldChange.y, xlim=c(-4,5), ylim=c(-4,6), pch=19, cex=0.3,
+          xlab="L2FC: MNK3 (IL23/IL1b +/-)", ylab="L2FC: mILC3 (TL1A +/-)", col="gray50")
+     ) 
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  (padj.x<0.05 & padj.y>0.05) &
+                   symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),])],
+     points(log2FoldChange.x, log2FoldChange.y, pch=19, cex=0.3, col="darkgreen"))
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  padj.x<0.05 & padj.y>0.05 & 
+                  symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),])],
+     text(x=log2FoldChange.x,y=log2FoldChange.y+0.2,labels=symbol, col="darkgreen", cex=0.4))
+
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  (padj.x>0.05 & padj.y<0.05) &
+                  symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),])],
+     points(log2FoldChange.x, log2FoldChange.y, pch=19, cex=0.3, col="darkblue"))
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  padj.x>0.05 & padj.y<0.05 & 
+                  symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),]) ],
+     text(x=log2FoldChange.x,y=log2FoldChange.y+0.2,labels=symbol, col="darkblue", cex=0.4))
+
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  (padj.x<0.05 & padj.y<0.05) &
+                  symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj),])],
+     points(log2FoldChange.x, log2FoldChange.y, pch=19, cex=0.3, col="darkred"))
+
+
+with(resWt_TL1A[!is.na(padj.x) & !is.na(padj.y) & 
+                  padj.x<0.05 & padj.y<0.05 & 
+                  symbol %in% rownames(resA_crispr_stim[resA_crispr_stim$padj<0.05 & !is.na(resA_crispr_stim$padj) ,])],
+     text(x=log2FoldChange.x,y=log2FoldChange.y+0.2,labels=symbol, col="darkred", cex=0.4))
+
+
+abline(h=0, lty=1, lwd=0.5)
+abline(v=0, lty=1, lwd=0.5)
+abline(a =0, b=1, lty=2)
+
+
+legend("bottomright", c("DEG in Cln3 CRISPRa + IL23/IL1b-stim. MNK3", "DEG in Cln3 CRISPRa + TL1A-stim. mILC3", "DEG in all three"),fill=c("darkgreen", "darkblue", "darkred"), cex=0.5)
+
+dev.off()
+
+```
+
+Replot TL1A data as my standard EnhancedVolcano...
+
+```{r}
+
+pdf("volcano_TL1A_stim_labelled_noBoxes_2.pdf", height=7, width=7)
+EnhancedVolcano(TL1A,
+    lab = TL1A$symbol,
+    x = 'log2FoldChange',
+    y = 'padj', xlim=c(-10,10),
+    pCutoff = 0.05,  # Adjust this as needed
+    FCcutoff = 0,  # Fold change cutoff
+    title = 'Volcano plot of DESeq2 results',
+    subtitle = 'Stimulated: wt vs Cln3 CRISPRi',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~-Log[10]~italic(Padj)),
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    legendLabels=c('Not sig.', 'Log2 FC', 'padj', 'padj & Log2 FC'),
+    legendPosition = 'bottom',
+    labSize = 3.0,
+    pointSize = 2,
+    gridlines.major = TRUE,
+    gridlines.minor = FALSE, 
+    boxedLabels = F, 
+    drawConnectors = T, widthConnectors = 0.25, arrowheads=F, colConnectors ="lightgrey", max.overlaps=200,
+    selectLab = TL1A[padj<1e-6 & abs(log2FoldChange)>3 & !is.na(padj)]$symbol
+    #pointSize = ifelse(rownames(resA_crispr_stim_trimmed)%in%trimmed, 2,1),
+    )+  theme_minimal(base_size=9) +
+    theme(
+      panel.border = element_rect(color = "black", fill = NA, size = 0.15),
+      axis.line = element_line(size = 0.25),
+      axis.ticks = element_line(size = 0.25),
+      panel.grid.major = element_line(size = 0.5),
+      panel.grid.minor = element_line(size = 0.25)
+    )
+
+dev.off()
+
+```
+
+Barplots for Cln3 and Apobr changes in expression upon TL1A, stimulation, CRISPRa, CRISPRi
+
+```{r}
+cln3 = data.frame(perturbation=c("WT", "WT","WT","WT", "CRISPRi","CRISPRi", "CRISPRa", "CRISPRa"),
+                  stimulation=c("Baseline", "IL23/IL1b", "Baseline", "TL1A", "Baseline", "IL23/IL1b", "Baseline", "IL23/IL1b"),
+                  relativeExpr = c(1, 2^resWt["Cln3",]$log2FoldChange,
+                                   1, 2^TL1A[symbol=="Cln3"]$log2FoldChange,
+                                   2^resI_crispr_unstim["Cln3",]$log2FoldChange,
+                                   2^resWt["Cln3",]$log2FoldChange*2^resI_crispr_stim["Cln3",]$log2FoldChange,
+                                   2^resA_crispr_unstim["Cln3",]$log2FoldChange,
+                                   2^resWt["Cln3",]$log2FoldChange*2^resA_crispr_stim["Cln3",]$log2FoldChange),
+                  relativeExprMinusSE=c(1, 2^(resWt["Cln3",]$log2FoldChange-resWt["Cln3",]$lfcSE),
+                                   1, 2^(TL1A[symbol=="Cln3"]$log2FoldChange-TL1A[symbol=="Cln3"]$lfcSE),
+                                   2^(resI_crispr_unstim["Cln3",]$log2FoldChange-resI_crispr_unstim["Cln3",]$lfcSE),
+                                   2^resWt["Cln3",]$log2FoldChange*2^(resI_crispr_stim["Cln3",]$log2FoldChange-resI_crispr_stim["Cln3",]$lfcSE),
+                                   2^(resA_crispr_unstim["Cln3",]$log2FoldChange-resA_crispr_unstim["Cln3",]$lfcSE),
+                                   2^resWt["Cln3",]$log2FoldChange*2^(resA_crispr_stim["Cln3",]$log2FoldChange-resA_crispr_stim["Cln3",]$lfcSE)),
+                  relativeExprPlusSE=c(1, 2^(resWt["Cln3",]$log2FoldChange+resWt["Cln3",]$lfcSE),
+                                   1, 2^(TL1A[symbol=="Cln3"]$log2FoldChange+TL1A[symbol=="Cln3"]$lfcSE),
+                                   2^(resI_crispr_unstim["Cln3",]$log2FoldChange+resI_crispr_unstim["Cln3",]$lfcSE),
+                                   2^resWt["Cln3",]$log2FoldChange*2^(resI_crispr_stim["Cln3",]$log2FoldChange+resI_crispr_stim["Cln3",]$lfcSE),
+                                   2^(resA_crispr_unstim["Cln3",]$log2FoldChange+resA_crispr_unstim["Cln3",]$lfcSE),
+                                   2^resWt["Cln3",]$log2FoldChange*2^(resA_crispr_stim["Cln3",]$log2FoldChange+resA_crispr_stim["Cln3",]$lfcSE)))
+
+
+apobr = data.frame(perturbation=c("WT", "WT","WT","WT", "CRISPRi","CRISPRi", "CRISPRa", "CRISPRa"),
+                  stimulation=c("Baseline", "IL23/IL1b", "Baseline", "TL1A", "Baseline", "IL23/IL1b", "Baseline", "IL23/IL1b"),
+                  relativeExpr = c(1, 2^resWt["Apobr",]$log2FoldChange,
+                                   1, 2^TL1A[symbol=="Apobr"]$log2FoldChange,
+                                   2^resI_crispr_unstim["Apobr",]$log2FoldChange,
+                                   2^resWt["Apobr",]$log2FoldChange*2^resI_crispr_stim["Apobr",]$log2FoldChange,
+                                   2^resA_crispr_unstim["Apobr",]$log2FoldChange,
+                                   2^resWt["Apobr",]$log2FoldChange*2^resA_crispr_stim["Apobr",]$log2FoldChange),
+                  relativeExprMinusSE=c(1, 2^(resWt["Apobr",]$log2FoldChange-resWt["Apobr",]$lfcSE),
+                                   1, 2^(TL1A[symbol=="Apobr"]$log2FoldChange-TL1A[symbol=="Apobr"]$lfcSE),
+                                   2^(resI_crispr_unstim["Apobr",]$log2FoldChange-resI_crispr_unstim["Apobr",]$lfcSE),
+                                   2^resWt["Apobr",]$log2FoldChange*2^(resI_crispr_stim["Apobr",]$log2FoldChange-resI_crispr_stim["Apobr",]$lfcSE),
+                                   2^(resA_crispr_unstim["Apobr",]$log2FoldChange-resA_crispr_unstim["Apobr",]$lfcSE),
+                                   2^resWt["Apobr",]$log2FoldChange*2^(resA_crispr_stim["Apobr",]$log2FoldChange-resA_crispr_stim["Apobr",]$lfcSE)),
+                  relativeExprPlusSE=c(1, 2^(resWt["Apobr",]$log2FoldChange+resWt["Apobr",]$lfcSE),
+                                   1, 2^(TL1A[symbol=="Apobr"]$log2FoldChange+TL1A[symbol=="Apobr"]$lfcSE),
+                                   2^(resI_crispr_unstim["Apobr",]$log2FoldChange+resI_crispr_unstim["Apobr",]$lfcSE),
+                                   2^resWt["Apobr",]$log2FoldChange*2^(resI_crispr_stim["Apobr",]$log2FoldChange+resI_crispr_stim["Apobr",]$lfcSE),
+                                   2^(resA_crispr_unstim["Apobr",]$log2FoldChange+resA_crispr_unstim["Apobr",]$lfcSE),
+                                   2^resWt["Apobr",]$log2FoldChange*2^(resA_crispr_stim["Apobr",]$log2FoldChange+resA_crispr_stim["Apobr",]$lfcSE)))
+```
+
+```{r}
+
+library(ComplexUpset)
+
+cln3$perturbation = factor(cln3$perturbation, levels=c("WT", "CRISPRi", "CRISPRa"))
+cln3$stimulation = factor(cln3$stimulation, levels=c("Baseline", "IL23/IL1b", "TL1A"))
+
+apobr$perturbation = factor(apobr$perturbation, levels=c("WT", "CRISPRi", "CRISPRa"))
+apobr$stimulation = factor(apobr$stimulation, levels=c("Baseline", "IL23/IL1b", "TL1A"))
+
+pdf("Cln3_expression.pdf")
+ggplot(cln3, aes(x = perturbation, y = relativeExpr, fill = stimulation)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(aes(ymin = relativeExprMinusSE, ymax = relativeExprPlusSE),
+                position = position_dodge(width = 0.8), width = 0.2) + ggtitle("Cln3") +
+  theme_minimal()
+dev.off()
+
+pdf("Apobr_expression.pdf")
+ggplot(apobr, aes(x = perturbation, y = relativeExpr, fill = stimulation)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(aes(ymin = relativeExprMinusSE, ymax = relativeExprPlusSE),
+                position = position_dodge(width = 0.8), width = 0.2) + ggtitle("Apobr") +
+  theme_minimal()
+dev.off()
+
+
+```
