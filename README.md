@@ -18,6 +18,10 @@ The `./PCHi-C` directory contains code for:
  - CHiCAGO vs ABC comparison
  - Epigenetic/TFs binding/PCHi-C/GWAS plots
 
+### [`./RELI`](./RELI)
+The `./RELI` directory contains code for:
+ - analysis of RELI calling across disease traits for ILC3s and CD4+ T cells
+
 ### [`./LOLA`](./LOLA)
 The `./LOLA` directory contains a script for running LOLA, checking enrichment of promoter-interacting regions for TF binding sites.
 
